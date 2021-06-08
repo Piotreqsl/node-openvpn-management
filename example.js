@@ -136,9 +136,9 @@ openvpn.on('console-output', output => {
         if (output.includes("ROUTING TABLE")) addToStatusArray = true;
         if (output.includes("GLOBAL STATS")) {
             addToStatusArray = false;
-            fetchedFromStatus = fetchedFromStatus.slice(2);
             console.log(fetchedFromStatus)
             MONGO_updateDeviceList(fetchedFromStatus);
+            fetchedFromStatus = [];
 
         }
 
@@ -253,6 +253,8 @@ async function MONGO_setOfflineFor(cert_name) {
 
 async function MONGO_updateDeviceList(list) {
     try {
+
+
         let exsisitngDevices = await dbo.collection("devices").find({}).toArray();
         console.log(exsisitngDevices);
 
@@ -260,10 +262,12 @@ async function MONGO_updateDeviceList(list) {
         let connectedCerts = [];
         let mongodbCerts = [];
 
+        list.splice(0, 2)
         list.forEach(entry => {
             let subarr = entry.split(",");
 
-            connectedCerts.push(subarr[2]);
+
+            connectedCerts.push(subarr[1]);
 
             arrayConnected.push({
                 local_ip: subarr[0],
@@ -338,7 +342,7 @@ async function MONGO_updateDeviceList(list) {
         }
 
 
-        if (newDevices.length() > 0) {
+        if (newDevices.length > 0) {
             let devicesToAdd = arrayConnected.filter(e => newDevices.includes(e.cert_name));
             await dbo.collection("devices").insertMany(devicesToAdd);
         }
