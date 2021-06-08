@@ -61,11 +61,14 @@ MongoClient.connect(url, {
     console.log(collections);
 
     if (!collections.includes('devices')) {
-        dbo.createCollection("devices", function (err, res) {
+        await dbo.createCollection("devices", function (err, res) {
             if (err) throw err;
             console.log("devices created!");
             //db.close();
         });
+
+
+        const devices = dbo.collection("devices")
     }
 
 
@@ -235,7 +238,10 @@ async function MONGO_setOfflineFor(cert_name) {
 
         await dbo.collection('devices').updateOne({ cert_name: cert_name }, {
             $set: {
-                status: "OFFLINE"
+                status: "OFFLINE",
+                local_ip: "-",
+                public_ip: "-"
+
             }
         })
 
@@ -247,8 +253,82 @@ async function MONGO_setOfflineFor(cert_name) {
 
 async function MONGO_updateDeviceList(list) {
     try {
-        let exsisitngDevices = await dbo.collection("devices").find({});
+        let exsisitngDevices = await dbo.collection("devices").find({}).toArray();
         console.log(exsisitngDevices);
+
+        var arrayConnected = [];
+        let connectedCerts = [];
+        let mongodbCerts = [];
+
+        list.forEach(entry => {
+            let subarr = entry.split(",");
+
+            connectedCerts.push(subarr[2]);
+
+            arrayConnected.push({
+                local_ip: subarr[0],
+                cert_name: subarr[1],
+                public_ip: subarr[2],
+                status: 'ONLINE'
+            })
+        });
+
+        exsisitngDevices.forEach(entry => {
+            mongodbCerts.push(entry.cert_name);
+        });
+
+
+        let newDevices = connectedCerts.filter(e => !mongodbCerts.includes(e));
+        let offlineDevices = mongodbCerts.filter(e => !connectedCerts.includes(e));
+        let onlineDevices = connectedCerts.filter(e => mongodbCerts.includes(e));
+
+
+
+
+        console.log("NEW DEVICES: " + newDevices.length())
+        console.log("OFFLINE DEVICES: " + offlineDevices.length())
+        console.log("ONLINE DEVICES: " + onlineDevices.length())
+
+        await dbo.collection("devices").updateMany(
+            { cert_name: { $in: offlineDevices } },
+            {
+                $set: {
+                    status: "OFFLINE",
+                    local_ip: "-",
+                    public_ip: "-"
+                }
+            }
+        )
+
+        let devicesToSetOnline = arrayConnected.filter(e => onlineDevices.includes(e.cert_name));
+        for (var i = 0; i < devicesToSetOnline.length(); i++) {
+            let device = devicesToSetOnline[i];
+            let mongodbDevice = exsisitngDevices.find(el => el.cert_name = device.cert_name);
+
+            if (mongodbDevice.public_ip != device.public_ip || mongodbDevice.local_ip != device.local_ip || mongodbDevice.status == "OFFLINE") {
+                await dbo.collection("devices").updateOne({
+                    cert_name: device.cert_name
+                },
+                    {
+                        $set: {
+                            status: "ONLINE",
+                            local_ip: device.local_ip,
+                            public_ip: device.public_ip
+                        }
+                    }
+                )
+            }
+        }
+
+
+
+        let devicesToAdd = arrayConnected.filter(e => newDevices.includes(e.cert_name));
+        await dbo.collection("devices").insertMany(devicesToAdd);
+
+
+
+
+
 
     } catch (error) {
         console.log("MONGO_updateDeviceList ERROR: " + error)
