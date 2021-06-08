@@ -83,6 +83,12 @@ app.get('/', async (req, res) => {
 
 })
 
+app.get('/huj', async (req, res) => {
+
+    openvpnmanager.getStatus();
+
+})
+
 
 //openvpn
 const openvpn = openvpnmanager.connect(opts)
@@ -127,7 +133,9 @@ openvpn.on('console-output', output => {
         if (output.includes("ROUTING TABLE")) addToStatusArray = true;
         if (output.includes("GLOBAL STATS")) {
             addToStatusArray = false;
+            fetchedFromStatus = fetchedFromStatus.slice(2);
             console.log(fetchedFromStatus)
+            MONGO_updateDeviceList(fetchedFromStatus);
 
         }
 
@@ -233,6 +241,17 @@ async function MONGO_setOfflineFor(cert_name) {
 
     } catch (e) {
         console.log("MONGO_setOfflineFor ERROR: " + e)
+    }
+
+}
+
+async function MONGO_updateDeviceList(list) {
+    try {
+        let exsisitngDevices = await dbo.collection("devices").find({});
+        console.log(exsisitngDevices);
+
+    } catch (error) {
+        console.log("MONGO_updateDeviceList ERROR: " + error)
     }
 
 }
