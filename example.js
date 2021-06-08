@@ -285,9 +285,9 @@ async function MONGO_updateDeviceList(list) {
 
 
 
-        console.log("NEW DEVICES: " + newDevices.length())
-        console.log("OFFLINE DEVICES: " + offlineDevices.length())
-        console.log("ONLINE DEVICES: " + onlineDevices.length())
+        console.log("NEW DEVICES: " + newDevices.length)
+        console.log("OFFLINE DEVICES: " + offlineDevices.length)
+        console.log("ONLINE DEVICES: " + onlineDevices.length)
 
         await dbo.collection("devices").updateMany(
             { cert_name: { $in: offlineDevices } },
@@ -301,7 +301,7 @@ async function MONGO_updateDeviceList(list) {
         )
 
         let devicesToSetOnline = arrayConnected.filter(e => onlineDevices.includes(e.cert_name));
-        for (var i = 0; i < devicesToSetOnline.length(); i++) {
+        for (var i = 0; i < devicesToSetOnline.length; i++) {
             let device = devicesToSetOnline[i];
             let mongodbDevice = exsisitngDevices.find(el => el.cert_name = device.cert_name);
 
